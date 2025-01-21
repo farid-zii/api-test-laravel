@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Transaksi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TransaksiController extends Controller
 {
@@ -12,7 +14,11 @@ class TransaksiController extends Controller
      */
     public function index()
     {
-        //
+        $data = Transaksi::latest()->get();
+        return response()->json([
+            'msg'=>'list transaksi',
+            'data'=>$data
+        ],200);
     }
 
     /**
@@ -28,7 +34,35 @@ class TransaksiController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $product = $request->validate([
+            'product'=>'required|array',
+            'product.*.id_product'=>'required',
+            'product.*.name'=>'required|string',
+            'product.*.qty'=>'required|numeric|min:1',
+            'product.*.total'=>'required',
+        ]);
+        try {
+            DB::beginTransaction();
+
+
+            $total_price =0 ;
+
+            foreach ($product['product'] as $item) {
+                $total_price += $item['total'];
+            }
+
+
+            $data = Transaksi::create([
+                'id_user'=>Auth::user()->id,
+                'product'=>json_encode($product),
+                'price_total'=>$total_price
+            ]);
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollback();
+        }
+
+
     }
 
     /**
